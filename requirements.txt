@@ -1,0 +1,7 @@
+tkintertable
+pywin32
+psutil
+requests
+logger 
+
+

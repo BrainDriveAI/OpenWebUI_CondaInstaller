@@ -1,0 +1,16 @@
+.vscode/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+
+dist/
+build/
+*.EXE
+logs/
+*.spec
