@@ -22,7 +22,7 @@ class EnvironmentSetup:
                 "-y"
             ]
             self.run_command(create_env_cmd, output_box)
-
+            Logger.log("This can take a while, please be patient")
             # Install open-webui using pip via conda run
             pip_install_cmd = [
                 self.conda_exe,
@@ -39,7 +39,7 @@ class EnvironmentSetup:
             Logger.log(f"Environment setup failed: {e}")
             self.safe_output_insert(output_box, f"Environment setup failed: {e}\n")
             raise
-        
+
     def update_open_webui(self, output_box):
             """Updates Open WebUI to the latest version."""
             try:

@@ -30,7 +30,7 @@ class TextRedirector:
 class InstallerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Open WebUI Conda Installer (Beta v0.1)")
+        self.root.title("Open WebUI Conda Installer (Beta v0.1.1)")
         self.root.geometry("800x600")
         self.root.resizable(True, True)
 
@@ -304,8 +304,9 @@ class InstallerApp:
         """Start Open WebUI using conda run."""
         def start_task():
             try:
-                print(f"Starting Open WebUI Server...")
-                print(f"Especially the first time, this may take a moment.")
+                self.start_button.config(state="disabled")
+                Logger.log(f"Starting Open WebUI Server...")
+                Logger.log(f"Especially the first time, this may take a moment.")
                 installer = MinicondaInstaller()
                 env_setup = EnvironmentSetup(installer.base_path, installer.miniconda_path)
                 conda_exe = env_setup.conda_exe
@@ -335,7 +336,7 @@ class InstallerApp:
                 import psutil
                 open_webui_pid = None
 
-                for attempt in range(10):
+                for attempt in range(60):
                     time.sleep(3)  # Wait for 3 seconds
 
                     # Use psutil to get the child processes
@@ -350,10 +351,10 @@ class InstallerApp:
                     if open_webui_pid is not None:
                         break  # Found the process, exit the outer loop
                     else:
-                        print(f"Attempt {attempt + 1}/10: Open WebUI process not found yet.")
+                        Logger.log(f"Attempt {attempt + 1}/10: Open WebUI process not found yet.")
 
                 if open_webui_pid is None:
-                    print("Failed to find open-webui process after multiple attempts.\n")
+                    Logger.log("Failed to find open-webui process after multiple attempts.\n")
                     return
 
                 # Store the PID in a file
@@ -361,33 +362,33 @@ class InstallerApp:
                 with open(pid_file, "w") as f:
                     f.write(str(open_webui_pid))
 
-                print(f"Open WebUI started with PID {open_webui_pid}.\n")
+                Logger.log(f"Open WebUI started with PID {open_webui_pid}.\n")
 
 
                 # Check if the server is accessible on http://localhost:8080
-                print("Checking for server availability...")
+                Logger.log("Checking for server availability...")
                 server_ready = False
-                for attempt in range(20):  # Retry up to 20 times with a delay
+                for attempt in range(120):  # Retry up to 20 times with a delay
                     try:
                         with socket.create_connection(("localhost", 8080), timeout=2):
                             server_ready = True
                             break
                     except (socket.timeout, ConnectionRefusedError):
-                        print(f"Attempt {attempt + 1}/20: Server not ready yet. Retrying in 2 seconds...")
+                        Logger.log(f"Attempt {attempt + 1}/20: Server not ready yet. Retrying in 2 seconds...")
                         time.sleep(2)
 
                 if server_ready:
                     # Open the browser to http://localhost:8080
                     webbrowser.open("http://localhost:8080")
-                    print("Opened browser to http://localhost:8080")
+                    Logger.log("Opened browser to http://localhost:8080")
                 else:
-                    print("Server did not become ready after multiple attempts.\n")
+                    Logger.log("Server did not become ready after multiple attempts.\n")
 
 
 
                 # Update Start button to "Stop Open WebUI"
                 self.root.after(0, self.start_button.config, {'text': 'Stop Open WebUI', 'command': self.stop_open_webui})
-
+                self.start_button.config(state="normal")
                 # Read output and display in the output box
                 for line in process.stdout:
                     self.output_box.after(0, self.output_box.insert, END, line)
@@ -395,9 +396,9 @@ class InstallerApp:
 
                 process.wait()
                 if process.returncode != 0:
-                    print(f"Open WebUI exited with return code {process.returncode}.\n")
+                    Logger.log(f"Open WebUI exited with return code {process.returncode}.\n")
                 else:
-                    print("Open WebUI has stopped.\n")
+                    Logger.log("Open WebUI has stopped.\n")
 
                 # After process ends, remove PID file
                 if os.path.exists(pid_file):
@@ -407,7 +408,7 @@ class InstallerApp:
                 self.root.after(0, self.start_button.config, {'text': 'Start Open WebUI', 'command': self.start_open_webui})
 
             except Exception as e:
-                print(f"Error starting Open WebUI: {e}\n")
+                Logger.log(f"Error starting Open WebUI: {e}\n")
 
         # Run the start task in a separate thread
         threading.Thread(target=start_task, daemon=True).start()
@@ -428,15 +429,15 @@ class InstallerApp:
                     child.terminate()
                 process.terminate()
                 psutil.wait_procs([process], timeout=5)
-                print(f"Open WebUI with PID {pid} has been terminated.\n")
+                Logger.log(f"Open WebUI with PID {pid} has been terminated.\n")
                 # Remove the PID file
                 os.remove(pid_file)
                 # Update the Start button
                 self.start_button.config(state="normal", text="Start Open WebUI", command=self.start_open_webui)
             except Exception as e:
-                print(f"Error stopping Open WebUI: {e}\n")
+                Logger.log(f"Error stopping Open WebUI: {e}\n")
         else:
-            print("Open WebUI is not running.\n")
+            Logger.log("Open WebUI is not running.\n")
 
     def run_installation(self):
         """Run the installation process in a background thread."""
