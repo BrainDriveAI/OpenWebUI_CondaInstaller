@@ -30,14 +30,18 @@ class MinicondaInstaller:
             self.ensure_directories()
 
             # Download Miniconda installer if not already downloaded
+            Logger.log(f"********************************************************************************")
             if not os.path.exists(self.installer_path):
                 Logger.log(f"Downloading Miniconda installer to {self.installer_path}.")
+                Logger.log(f"[1/4] This step can take a few minutes based on your internet speed.")
                 self.download_installer()
             else:
                 Logger.log(f"Miniconda installer already exists at {self.installer_path}.")
 
             # Run the Miniconda installer silently and wait for it to complete
+            Logger.log(f"********************************************************************************")
             Logger.log("Running Miniconda installer.")
+            Logger.log(f"[2/4] This step can take a few minutes based on your computer")
             result = subprocess.run(
                 [
                     self.installer_path,

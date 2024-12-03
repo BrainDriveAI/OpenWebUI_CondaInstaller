@@ -21,8 +21,12 @@ class EnvironmentSetup:
                 "python=3.11",
                 "-y"
             ]
+            Logger.log(f"********************************************************************************")
+            Logger.log(f"[3/4] This step can take up to 5 minutes depending on your computer")
             self.run_command(create_env_cmd, output_box)
+            Logger.log("Environment setup complete.")
             Logger.log("This can take a while, please be patient")
+            
             # Install open-webui using pip via conda run
             pip_install_cmd = [
                 self.conda_exe,
@@ -30,9 +34,11 @@ class EnvironmentSetup:
                 "--prefix", self.env_path,
                 "pip", "install", "open-webui"
             ]
+            Logger.log(f"********************************************************************************")
+            Logger.log(f"[4/4] This step can take up to 10 minutes depending on your computer")
             self.run_command(pip_install_cmd, output_box)
-
-            Logger.log("Environment setup complete.")
+            Logger.log("Open WebUI setup complete.")
+           
             # self.safe_output_insert(output_box, "Environment setup complete.\n")
 
         except Exception as e:

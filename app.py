@@ -30,7 +30,7 @@ class TextRedirector:
 class InstallerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Open WebUI Conda Installer (Beta v0.1.1)")
+        self.root.title("Open WebUI Conda Installer (Beta v0.1.3)")
         self.root.geometry("800x600")
         self.root.resizable(True, True)
 
@@ -47,7 +47,7 @@ class InstallerApp:
         self.progress_text.set("Installation Progress")
 
         # Instructions Section
-        Label(frame, text="Instructions", font=("Arial", 14, "bold")).pack(anchor="w", pady=(20, 10))
+        Label(frame, text="Instructions", font=("Arial", 14, "bold")).pack(anchor="w", pady=(10, 10))
         Label(
             frame,
             text="This installer will set up Miniconda and Open WebUI.Click 'Install' to begin.",
@@ -89,10 +89,33 @@ class InstallerApp:
         self.update_button.pack(side="left", padx=5)
         self.update_button.config(state="disabled")        
 
-        # Add Icon Button
-        # self.add_icon_button = Button(button_frame, text="Add Icon", command=self.add_icon)
-        # self.add_icon_button.pack(side="left", padx=5)
-        # self.add_icon_button.config(state="normal")  # Enable the button
+       # Adding Ollama Section
+        ollama_frame = Frame(frame)
+        ollama_frame.pack(fill="x", pady=20)
+
+        # Ollama Heading
+        Label(ollama_frame, text="Ollama", font=("Arial", 14, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=5)
+
+        # Ollama Description on the Left
+        ollama_description = Label(
+            ollama_frame,
+            text="Open WebUI uses Ollama to handle serving local models to the interface. "
+                 "If you need it, feel free to install it now.",
+            font=("Arial", 12),
+            wraplength=550,
+            anchor="w",
+            justify="left",
+        )
+        ollama_description.grid(row=1, column=0, sticky="w", padx=10, pady=5)
+
+        # Install Ollama Button on the Right
+        self.install_ollama_button = Button(
+            ollama_frame,
+            text="Install Ollama",
+            command=self.install_ollama,
+        )
+        self.install_ollama_button.grid(row=1, column=1, sticky="e", padx=10, pady=5)
+        self.install_ollama_button.config(state="disabled")  # Initially disabled
 
         # Perform initial checks
         self.perform_initial_checks()
@@ -103,6 +126,49 @@ class InstallerApp:
             self.progress_text.set("Installation Progress")
         else:
             self.progress_text.set(f"Installation Progress [{step}/{total_steps}]")
+
+
+
+    def install_ollama(self):
+        """Handle the installation of Ollama."""
+        def ollama_install_task():
+            try:
+                self.install_ollama_button.config(state="disabled")
+                # Define the URL and target path for the installer
+                ollama_url = "https://ollama.com/download/OllamaSetup.exe"
+                installer_name = "OllamaSetup.exe"
+                installer_path = os.path.join(os.getcwd(), installer_name)  # Save in current directory
+                
+                Logger.log("Downloading Ollama installer...")
+                
+                # Download the installer
+                import urllib.request
+                with urllib.request.urlopen(ollama_url) as response, open(installer_path, 'wb') as out_file:
+                    data = response.read()
+                    out_file.write(data)
+
+                Logger.log("Ollama installer downloaded successfully.")
+                
+
+                # Run the installer
+                Logger.log("Running Ollama installer...")
+                subprocess.Popen(installer_path, shell=True)
+
+                Logger.log("Ollama installation initiated. Follow the on-screen instructions to complete the installation.")
+
+            except Exception as e:
+                Logger.log(f"Failed to install Ollama: {e}")
+                messagebox.showerror("Error", f"Failed to install Ollama: {e}")
+
+        # Run the installation task in a separate thread
+        threading.Thread(target=ollama_install_task, daemon=True).start()
+
+    def update_ollama_button_state(self):
+        """Enable the Ollama button if the Start Open WebUI button is enabled."""
+        if self.start_button["state"] == "normal":
+            self.install_ollama_button.config(state="normal")
+        else:
+            self.install_ollama_button.config(state="disabled")
 
     def add_icon(self):
         """Create a desktop shortcut for the application."""
@@ -230,7 +296,7 @@ class InstallerApp:
                         print("Error: Could not find conda executable or the environment is not properly set up.")
                         open_webui_installed = False
                 else:
-                    print("Since the environment is not set up, open-webui is not installed.")
+                    print("Please Click 'Install' to set up Open WebUI.")
                     open_webui_installed = False
                     update_available = False
 
@@ -263,11 +329,14 @@ class InstallerApp:
                         self.root.after(0, self.start_button.config, {'state': 'normal', 'text': 'Start Open WebUI', 'command': self.start_open_webui})
                     else:
                         self.root.after(0, self.start_button.config, {'state': 'disabled'})
+
+                self.root.after(0, self.update_ollama_button_state)
             except Exception as e:
                 print(f"Error during initial checks: {e}")
                 # If there's an error, assume not all checks passed
                 self.root.after(0, self.update_install_button_state, False, False, False, False)
 
+        
         # Run the checks in a separate thread
         threading.Thread(target=checks_task, daemon=True).start()
 
@@ -275,19 +344,21 @@ class InstallerApp:
     def update_install_button_state(self, conda_installed, env_exists, open_webui_installed, update_available):
         """Enable or disable the Install, Start, and Update buttons based on initial checks."""
         if conda_installed and env_exists and open_webui_installed:
-            # All checks passed
             self.install_button.config(state="disabled")
-            print("All components are already installed.")
+            print("All components are installed.")
+            print("Click 'Start Open WebUI' to Launch.")
         else:
-            # Some checks failed
             self.install_button.config(state="normal")
             self.start_button.config(state="disabled")
 
-        # Enable or disable the Update Open WebUI button
+        # Update the Update button
         if open_webui_installed and update_available:
             self.update_button.config(state="normal")
         else:
             self.update_button.config(state="disabled")
+
+        # Update Ollama button state
+        self.update_ollama_button_state()
 
 
     def check_process_running(self, pid):
@@ -306,7 +377,7 @@ class InstallerApp:
             try:
                 self.start_button.config(state="disabled")
                 Logger.log(f"Starting Open WebUI Server...")
-                Logger.log(f"Especially the first time, this may take a moment.")
+                Logger.log(f"This may take a few minutes depending on your computer. Your browser will open automatically when the server is ready.")
                 installer = MinicondaInstaller()
                 env_setup = EnvironmentSetup(installer.base_path, installer.miniconda_path)
                 conda_exe = env_setup.conda_exe
@@ -350,8 +421,6 @@ class InstallerApp:
 
                     if open_webui_pid is not None:
                         break  # Found the process, exit the outer loop
-                    else:
-                        Logger.log(f"Attempt {attempt + 1}/10: Open WebUI process not found yet.")
 
                 if open_webui_pid is None:
                     Logger.log("Failed to find open-webui process after multiple attempts.\n")
@@ -366,7 +435,8 @@ class InstallerApp:
 
 
                 # Check if the server is accessible on http://localhost:8080
-                Logger.log("Checking for server availability...")
+                # Logger.log("Checking for server availability...")
+                # Logger.log("Your browser will open automatically when the server is ready.")
                 server_ready = False
                 for attempt in range(120):  # Retry up to 20 times with a delay
                     try:
@@ -374,7 +444,6 @@ class InstallerApp:
                             server_ready = True
                             break
                     except (socket.timeout, ConnectionRefusedError):
-                        Logger.log(f"Attempt {attempt + 1}/20: Server not ready yet. Retrying in 2 seconds...")
                         time.sleep(2)
 
                 if server_ready:
