@@ -11,6 +11,7 @@ import subprocess
 import shutil
 import webbrowser
 import socket
+import ctypes
 
 class TextRedirector:
     """Redirect console output to a Tkinter Text widget."""
@@ -33,6 +34,7 @@ class InstallerApp:
         self.root.title("Open WebUI Conda Installer (Beta v0.1.3)")
         self.root.geometry("800x600")
         self.root.resizable(True, True)
+        self.sufficient_space = True
 
         # Determine the correct path for the icon
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -119,6 +121,29 @@ class InstallerApp:
 
         # Perform initial checks
         self.perform_initial_checks()
+
+
+    def check_disk_space(self):
+        """Check available space on C: drive and return True if sufficient."""
+        try:
+            free_bytes = ctypes.c_ulonglong(0)
+            ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+                ctypes.c_wchar_p("C:\\"), None, None, ctypes.pointer(free_bytes)
+            )
+            available_gb = free_bytes.value / (1024 ** 3)  # Convert bytes to GB
+            if available_gb < 4.5:
+                self.sufficient_space = False
+                Logger.log(
+                    "Warning: Insufficient disk space on C: drive. "
+                    "At least 4.5 GB of free space is required for installation."
+                )
+                return False
+            self.sufficient_space = True
+            return True
+        except Exception as e:
+            self.sufficient_space = False
+            Logger.log(f"Error checking disk space: {e}")
+            return False
 
     def update_progress(self, step, total_steps):
         """Update the progress label to show the current installation step or default message."""
@@ -213,6 +238,15 @@ class InstallerApp:
         def checks_task():
             print("Performing initial checks...")
             try:
+
+                # Check disk space first
+                self.check_disk_space()
+                if not self.sufficient_space:
+                    # Logger.log("Insufficient disk space available for installation.")
+                    self.root.after(0, self.install_button.config, {'state': 'disabled'})
+                # else:
+                    # Logger.log("Sufficient disk space available for installation.")             
+                
                 # Initialize MinicondaInstaller
                 installer = MinicondaInstaller()
                 conda_installed = installer.verify_conda()
@@ -343,22 +377,35 @@ class InstallerApp:
 
     def update_install_button_state(self, conda_installed, env_exists, open_webui_installed, update_available):
         """Enable or disable the Install, Start, and Update buttons based on initial checks."""
-        if conda_installed and env_exists and open_webui_installed:
+        # Determine the Install button state
+        if not self.sufficient_space:
             self.install_button.config(state="disabled")
-            print("All components are installed.")
-            print("Click 'Start Open WebUI' to Launch.")
+            # Logger.log("Install button remains disabled due to insufficient disk space.")
+        elif conda_installed and env_exists and open_webui_installed:
+            self.install_button.config(state="disabled")
+            # Logger.log("All components are installed. No need to reinstall.")
         else:
             self.install_button.config(state="normal")
-            self.start_button.config(state="disabled")
+            # Logger.log("Install button enabled. Ready to install.")
 
-        # Update the Update button
+        # Determine the Start button state
+        if open_webui_installed and env_exists and open_webui_installed:
+            self.start_button.config(state="normal")
+            print("All components are installed.")
+            print("Click 'Start Open WebUI' to Launch.")            
+            # Logger.log("Start button enabled. You can start Open WebUI.")
+        else:
+            self.start_button.config(state="disabled")
+            # Logger.log("Start button disabled. Installation or setup incomplete.")
+
+        # Determine the Update button state
         if open_webui_installed and update_available:
             self.update_button.config(state="normal")
+            # Logger.log("Update button enabled. An update is available.")
         else:
             self.update_button.config(state="disabled")
+            # Logger.log("Update button disabled. No updates available or installation incomplete.")
 
-        # Update Ollama button state
-        self.update_ollama_button_state()
 
 
     def check_process_running(self, pid):
