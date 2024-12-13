@@ -1,0 +1,37 @@
+import tkinter as tk
+from tkinter import ttk
+
+class StatusDisplay:
+    def __init__(self, parent):
+        """
+        Initializes the StatusDisplay and creates its components.
+
+        :param parent: The parent frame or Tk root to attach this status display.
+        """
+        self.frame = tk.Frame(parent, height=100, bg="lightgrey")
+        self.frame.pack(fill=tk.X, padx=10, pady=10)
+
+        self.step_label = tk.Label(self.frame, text="Step: [1/3] Initializing...", font=("Arial", 12), bg="lightgrey")
+        self.step_label.pack(anchor="w", padx=10, pady=5)
+
+        self.details_label = tk.Label(
+            self.frame,
+            text="Detailed information about the current step.",
+            font=("Arial", 10),
+            wraplength=580,
+            justify="left",
+            bg="lightgrey",
+        )
+        self.details_label.pack(anchor="w", padx=10)
+
+        self.progress_bar = ttk.Progressbar(self.frame, length=580, mode="determinate")
+        self.progress_bar.pack(padx=10, pady=10)
+        self.progress_bar['value'] = 33  # Initial progress value
+
+    def get_components(self):
+        """
+        Returns the components needed for the StatusUpdater.
+
+        :return: A tuple (step_label, details_label, progress_bar)
+        """
+        return self.step_label, self.details_label, self.progress_bar
