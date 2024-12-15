@@ -18,7 +18,7 @@ from helper_image import HelperImage
 def main():
     # Create the main window
     root = tk.Tk()
-    root.title("Open WebUI - Conda Installer [v0.2.0]")
+    root.title("Open WebUI - Conda Installer [v0.2.1]")
     config = AppConfig()
 
     try:

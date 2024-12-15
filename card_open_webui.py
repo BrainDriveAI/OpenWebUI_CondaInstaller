@@ -212,11 +212,13 @@ class OpenWebUI(BaseCard):
                     "open-webui", "serve"
                 ]
 
+                CREATE_NO_WINDOW = 0x08000000
                 webui_process = subprocess.Popen(
                     open_webui_cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True
+                    text=True,
+                    creationflags=CREATE_NO_WINDOW
                 )
 
                 open_webui_pid_file = os.path.join(webui_installer.config.base_path, "open_webui.pid")
@@ -258,9 +260,9 @@ class OpenWebUI(BaseCard):
                 )
 
                 pipeline_process = pipeline_installer.start_pipelines()
-                pipeline_pid_file = os.path.join(pipeline_installer.config.base_path, "pipelines.pid")
-                with open(pipeline_pid_file, "w") as f:
-                    f.write(str(pipeline_process.pid))
+                # pipeline_pid_file = os.path.join(pipeline_installer.config.base_path, "pipelines.pid")
+                # with open(pipeline_pid_file, "w") as f:
+                #     f.write(str(pipeline_process))
 
                 status_updater.update_status(
                     "Step: Pipelines Started.",
