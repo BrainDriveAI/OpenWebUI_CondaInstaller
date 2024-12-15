@@ -23,8 +23,7 @@ class MinicondaInstaller(BaseInstaller):
         Install Miniconda by downloading and running the installer sequentially.
         """
         if self.check_installed():
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Step: [3/3] Miniconda Already Installed.",
                     "Miniconda is already installed. Skipping installation.",
                     100,
@@ -35,8 +34,7 @@ class MinicondaInstaller(BaseInstaller):
             self.download_installer()
 
             # Run the installer silently
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Step: [2/3] Installing Miniconda...",
                     "Running the Miniconda installer. Please wait.",
                     60,
@@ -52,15 +50,13 @@ class MinicondaInstaller(BaseInstaller):
                 ],
                 check=True,
             )
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Step: [3/3] Installation Complete.",
                     "Miniconda installation completed successfully.",
                     100,
                 )
         except Exception as e:
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Error: Installation Failed.",
                     f"An error occurred: {e}",
                     0,
@@ -72,22 +68,19 @@ class MinicondaInstaller(BaseInstaller):
         Download the Miniconda installer.
         """
         if not os.path.exists(self.installer_path):
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Step: [1/3] Downloading Miniconda...",
                     "Downloading the Miniconda installer. This may take a few minutes.",
                     10,
                 )
             urllib.request.urlretrieve(self.miniconda_url, self.installer_path)
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Step: [1/3] Download Complete.",
                     "Miniconda installer downloaded successfully.",
                     30,
                 )
         else:
-            if self.status_updater:
-                self.status_updater.update_status(
+            self.config.status_updater.update_status(
                     "Step: [1/3] Installer Found.",
                     "Miniconda installer already exists. Skipping download.",
                     30,
@@ -129,16 +122,11 @@ class MinicondaInstaller(BaseInstaller):
         # Add the '-y' flag to confirm environment creation
         create_cmd.append("-y")
 
-        # Log the command for debugging
-        print(f"Running command: {' '.join(create_cmd)}")
-
-        # Execute the command
         try:
-            subprocess.run(create_cmd, check=True)
+            self.run_command(create_cmd)
             print(f"Environment {env_name} set up successfully.")
         except subprocess.CalledProcessError as e:
             print(f"Failed to create environment {env_name}: {e}")
-            print(f"Command output: {e.output if hasattr(e, 'output') else 'No output available'}")
             raise
 
 
@@ -150,5 +138,58 @@ class MinicondaInstaller(BaseInstaller):
         if not self.check_installed():
             raise RuntimeError(f"{self.name} is not installed. Please install it first.")
 
-        subprocess.run([self.conda_exe, "update", "-n", "base", "-c", "defaults", "conda", "-y"], check=True)
-        print(f"{self.name} updated successfully.")
+        try:
+            self.run_command([self.conda_exe, "update", "-n", "base", "-c", "defaults", "conda", "-y"])
+            print(f"{self.name} updated successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to update Conda: {e}")
+            raise
+
+
+    def run_command(self, cmd_list, cwd=None, capture_output=True):
+        """
+        Runs a command and logs output in real-time. Prevents console windows from appearing.
+        
+        :param cmd_list: List of command and arguments to run.
+        :param cwd: Directory to execute the command in.
+        :param capture_output: Whether to capture and return stdout and stderr.
+        :return: The process's stdout and stderr as a tuple (stdout, stderr).
+        :raises: subprocess.CalledProcessError if the command fails.
+        """
+        try:
+            command_str = ' '.join(cmd_list)
+            print(f"Running command: {command_str}")
+
+            # Windows-specific flag to suppress console window
+            CREATE_NO_WINDOW = 0x08000000
+
+            process = subprocess.Popen(
+                cmd_list,
+                stdout=subprocess.PIPE if capture_output else None,
+                stderr=subprocess.PIPE if capture_output else None,
+                text=True,
+                creationflags=CREATE_NO_WINDOW,
+                cwd=cwd,
+                env=os.environ.copy()  # Ensure environment variables are inherited
+            )
+
+            stdout, stderr = process.communicate()
+
+            # Log output if capture_output is True
+            if stdout:
+                print(stdout)
+            if stderr:
+                print(stderr)
+
+            # Check for errors and raise if process failed
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(process.returncode, cmd_list, output=stdout, stderr=stderr)
+
+            return stdout, stderr
+        except subprocess.CalledProcessError as e:
+            print(f"Command failed: {' '.join(e.cmd)}, Return Code: {e.returncode}")
+            print(f"Error Output: {e.stderr}")
+            raise
+        except Exception as e:
+            print(f"Unexpected error while running command: {e}")
+            raise

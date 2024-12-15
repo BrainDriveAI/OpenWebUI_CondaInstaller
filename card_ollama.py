@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import urllib.request
 import subprocess
@@ -20,12 +21,11 @@ class Ollama(BaseCard):
         """Handle the installation of Ollama."""
         def ollama_install_task():
             try:
-                if status_updater:
-                    status_updater.update_status(
-                        "Step: [1/3] Downloading Ollama...",
-                        "Downloading the Ollama installer. Please wait.",
-                        0,
-                    )
+                self.config.status_updater.update_status(
+                    "Step: [1/3] Downloading Ollama...",
+                    "Downloading the Ollama installer. Please wait.",
+                    0,
+                )
 
                 # Define the URL and target path for the installer
                 ollama_url = "https://ollama.com/download/OllamaSetup.exe"
@@ -37,8 +37,7 @@ class Ollama(BaseCard):
                     data = response.read()
                     out_file.write(data)
 
-                if status_updater:
-                    status_updater.update_status(
+                self.config.status_updater.update_status(
                         "Step: [2/3] Running Installer...",
                         "Running the Ollama installer. Follow the on-screen instructions.",
                         50,
@@ -47,8 +46,7 @@ class Ollama(BaseCard):
                 # Run the installer
                 subprocess.Popen(installer_path, shell=True)
 
-                if status_updater:
-                    status_updater.update_status(
+                self.config.status_updater.update_status(
                         "Step: [3/3] Ollama Installation Started",
                         "The Ollama install inferface should be visible soon.",
                         100,
@@ -56,8 +54,7 @@ class Ollama(BaseCard):
                 self.installed = True
 
             except Exception as e:
-                if status_updater:
-                    status_updater.update_status(
+                self.config.status_updater.update_status(
                         "Error: Installation Failed",
                         f"Failed to install Ollama: {e}",
                         0,
@@ -95,7 +92,14 @@ class Ollama(BaseCard):
         card_frame = tk.Frame(parent_frame, relief=tk.GROOVE, bd=2)
         card_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        card_image = Image.open("ollama.png")
+        try:
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+            image_path = os.path.join(base_path, 'ollama.png')
+            card_image = Image.open(image_path)
+        except Exception as e:
+            print(f"Failed to load the image: {e}")
+
+
         card_image.thumbnail((50, 50))
         card_photo = ImageTk.PhotoImage(card_image)
 

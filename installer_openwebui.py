@@ -30,40 +30,44 @@ class OpenWebUIInstaller(BaseInstaller):
             "pip", "show", "open-webui"
         ]
         try:
-            result = subprocess.run(
-                pip_show_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=True
-            )
-            if "Name: open-webui" in result.stdout:
-                print("Open WebUI is installed.")
-                return True
-        except subprocess.CalledProcessError as e:
-            print(f"Error checking Open WebUI installation: {e}")
+            self.run_command(pip_show_cmd)
+            print("Open WebUI is installed.")
+            return True
+        except subprocess.CalledProcessError:
+            print("Open WebUI is not installed.")
         except FileNotFoundError:
             print("Conda executable not found. Ensure Miniconda is installed.")
 
-        print("Open WebUI is not installed.")
         return False
-
 
     def install(self):
         """
         Install Open WebUI into the Conda environment.
         """
         self.status_updater.update_status(
-                    "Step: [1/2] Open WebUI Install...",
-                    "Installing Open WebUI using Pip",
-                    50,
-                )        
+            "Step: [1/2] Open WebUI Install, this could easily take 10-20 minutes depending on your computer.",
+            "Installing Open WebUI using Pip",
+            50,
+        )
+
+        # Ensure the environment is set up
         if not os.path.exists(self.env_path):
             self.setup_environment("env")
 
         print("Installing Open WebUI...")
-        subprocess.run([self.conda_exe, "run", "--prefix", self.env_path, "pip", "install", "open-webui"], check=True)
+    
+        # Use run_command for consistent subprocess behavior
+        self.run_command([
+            self.conda_exe,
+            "run",
+            "--prefix", self.env_path,
+            "pip",
+            "install",
+            "open-webui"
+        ])
+        
         print("Open WebUI installation complete.")
+
 
     def check_requirements(self):
         """
@@ -78,23 +82,32 @@ class OpenWebUIInstaller(BaseInstaller):
         Set up the Conda environment for Open WebUI.
         """
         self.status_updater.update_status(
-                    "Step: [1/2] Setting Up Environment...",
-                    "Creating a Conda environment for Open WebUI.",
-                    50,
-                )
+            "Step: [1/2] Setting Up Environment...",
+            "Creating a Conda environment for Open WebUI.",
+            50,
+        )
+        
         if not os.path.exists(self.env_path):
             print(f"Setting up environment {env_name}...")
-            subprocess.run(
-                [self.conda_exe, "create", "--prefix", self.env_path, "python=3.11", "-y"],
-                check=True,
-            )
+            
+            # Use run_command for consistency
+            self.run_command([
+                self.conda_exe,
+                "create",
+                "--prefix",
+                self.env_path,
+                "python=3.11",
+                "-y"
+            ])
+            
             print(f"Environment {env_name} set up successfully.")
-
+        
         self.status_updater.update_status(
-                    "Step: [2/2] Environment has been setup",
-                    "Created a Conda environment for Open WebUI.",
-                    100,
-                )
+            "Step: [2/2] Environment has been setup",
+            "Created a Conda environment for Open WebUI.",
+            100,
+        )
+
 
     def update(self):
         """

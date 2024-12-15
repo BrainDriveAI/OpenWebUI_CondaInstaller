@@ -1,6 +1,8 @@
 import os
 import sys
 
+from status_updater import StatusUpdater
+
 class AppConfig:
     _instance = None
 
@@ -69,6 +71,28 @@ class AppConfig:
             print("Pipelines environment is not set up.")
             return False
         return True
+
+    @property
+    def status_display(self):
+        """Get or create the StatusDisplay."""
+        if self._status_display is None:
+            raise AttributeError("StatusDisplay has not been initialized.")
+        return self._status_display
+
+    @status_display.setter
+    def status_display(self, display):
+        """Set the StatusDisplay and initialize StatusUpdater."""
+        self._status_display = display
+        components = display.get_components()
+        self._status_updater = StatusUpdater(*components)
+
+    @property
+    def status_updater(self):
+        """Access the StatusUpdater."""
+        if self._status_updater is None:
+            raise AttributeError("StatusUpdater has not been initialized.")
+        return self._status_updater
+
 
     def __str__(self):
         """

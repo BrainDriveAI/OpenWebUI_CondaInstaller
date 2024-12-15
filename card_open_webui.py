@@ -1,4 +1,5 @@
 import os
+import sys
 import psutil
 import socket
 import subprocess
@@ -411,6 +412,12 @@ class OpenWebUI(BaseCard):
         else:
             button_manager.disable_buttons("update_open_webui")
 
+        self.config.status_updater.update_status(
+            "Initializing Complete",
+            "An update is available." if update_available else "No update is available.",
+            100,
+        )
+
 
         
         print(f"Update Check Result: Update Available = {update_available}")            
@@ -489,7 +496,12 @@ class OpenWebUI(BaseCard):
         card_frame = tk.Frame(parent_frame, relief=tk.GROOVE, bd=2)
         card_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        card_image = Image.open("testicon.png")
+        try:
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+            image_path = os.path.join(base_path, 'openwebui.png')
+            card_image = Image.open(image_path)
+        except Exception as e:
+            print(f"Failed to load the image: {e}")
         card_image.thumbnail((50, 50))
         card_photo = ImageTk.PhotoImage(card_image)
 
@@ -542,10 +554,16 @@ class OpenWebUI(BaseCard):
 
         if webui_installer.check_installed():
             button_manager.enable_buttons("start_open_webui")
+            webui_installer.check_update(callback=self.handle_update_check_result)
         else:
             button_manager.enable_buttons("install_open_webui")
+            self.config.status_updater.update_status(
+                "Initializing Complete",
+                "New install required",
+                100,
+            )            
         
         # button_manager.enable_buttons("update_open_webui")
-        # webui_installer.check_update(callback=self.handle_update_check_result)
+        
 
         # button_manager.enable_buttons("install_open_webui")

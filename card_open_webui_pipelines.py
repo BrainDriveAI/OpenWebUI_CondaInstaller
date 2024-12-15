@@ -1,3 +1,5 @@
+import os
+import sys
 from base_card import BaseCard
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -46,7 +48,14 @@ class OpenWebUIPipelines(BaseCard):
         card_frame = tk.Frame(parent_frame, relief=tk.GROOVE, bd=2)
         card_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        card_image = Image.open("testicon.png")
+        try:
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+            image_path = os.path.join(base_path, 'openwebui.png')
+            card_image = Image.open(image_path)
+        except Exception as e:
+            print(f"Failed to load the image: {e}")
+
+
         card_image.thumbnail((50, 50))
         card_photo = ImageTk.PhotoImage(card_image)
 

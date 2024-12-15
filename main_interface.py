@@ -1,3 +1,7 @@
+
+import os
+import shutil
+import sys
 import tkinter as tk
 from tkinter import ttk
 from card_ollama import Ollama
@@ -8,13 +12,31 @@ from status_display import StatusDisplay
 from status_updater import StatusUpdater
 import threading
 from AppConfig import AppConfig
+from helper_image import HelperImage 
+
 
 def main():
     # Create the main window
     root = tk.Tk()
     root.title("Open WebUI - Conda Installer [v0.2.0]")
     config = AppConfig()
-    # Set the dimensions of the window and make it non-resizable
+
+    try:
+        # Base paths
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        icon_source_path = os.path.join(base_path, 'DigitalBrainBaseIcon.ico')
+        icon_dest_path = os.path.join(config.base_path, 'DigitalBrainBaseIcon.ico')
+        
+        if not os.path.exists(icon_dest_path):
+            if os.path.exists(icon_source_path):
+                shutil.copy2(icon_source_path, icon_dest_path)
+            else:
+                raise FileNotFoundError(f"Icon file not found at {icon_source_path}")
+        root.iconbitmap(icon_dest_path)
+    except Exception as e:
+        print(f"Failed to set application icon: {e}")
+
+ 
     root.geometry("800x600")
     root.resizable(False, False)
 
@@ -49,7 +71,7 @@ def main():
     status_display = StatusDisplay(root)
     step_label, details_label, progress_bar = status_display.get_components()
     status_updater = StatusUpdater(step_label, details_label, progress_bar)
-
+    config.status_display = status_display
     # Display cards with status_updater
     webui_instance.display(left_group, status_updater)
     pipelines_instance.display(right_group, status_updater)
