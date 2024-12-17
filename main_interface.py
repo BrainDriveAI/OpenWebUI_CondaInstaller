@@ -18,7 +18,7 @@ from helper_image import HelperImage
 def main():
     # Create the main window
     root = tk.Tk()
-    root.title("Open WebUI Installer [v0.2.2]")
+    root.title("Open WebUI Installer [v0.2.3]")
     config = AppConfig()
 
     try:

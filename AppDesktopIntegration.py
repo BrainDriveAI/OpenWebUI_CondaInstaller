@@ -4,6 +4,7 @@ import requests
 import pythoncom
 from win32com.shell import shell, shellcon
 from win32com.client import Dispatch
+from AppConfig import AppConfig
 
 
 class AppDesktopIntegration:
@@ -12,7 +13,7 @@ class AppDesktopIntegration:
         Initializes the DesktopIntegration class.
         Automatically fetches the base path from the existing AppConfig singleton.
         """
-        from app_config import AppConfig  # Importing here to avoid circular imports
+          # Importing here to avoid circular imports
         app_config = AppConfig()
         
         self.base_path = app_config.base_path
