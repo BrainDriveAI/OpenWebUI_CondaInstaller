@@ -12,7 +12,7 @@ class Ollama(BaseCard):
     def __init__(self):
         super().__init__(
             name="Ollama",
-            description="Ollama facilitates streamlined operations by providing optimized modules for enhanced functionality and flexibility.",
+            description="Ollama allows you to download and run AI models on your computer to use with your AI system privately and securely",
             size="3.5GB"
         )
         self.installed = False

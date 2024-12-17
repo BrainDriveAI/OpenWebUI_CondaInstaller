@@ -16,7 +16,7 @@ from installer_pipelines import PipelinesInstaller
 
 class OpenWebUI(BaseCard):
     def __init__(self):
-        super().__init__(name="Open WebUI", description="A robust tool for managing AI-based web interfaces.", size="4.5GB")
+        super().__init__(name="Open WebUI", description="A robust tool for creating controlling and befeting from your own AI System", size="4.5GB")
         self.server_running = False  # Tracks if the server is running
 
     def install(self, status_updater=None):

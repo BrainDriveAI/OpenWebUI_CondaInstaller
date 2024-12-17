@@ -18,7 +18,7 @@ from helper_image import HelperImage
 def main():
     # Create the main window
     root = tk.Tk()
-    root.title("Open WebUI - Conda Installer [v0.2.1]")
+    root.title("Open WebUI Installer [v0.2.2]")
     config = AppConfig()
 
     try:
@@ -44,7 +44,7 @@ def main():
     top_frame = tk.Frame(root, height=80, bg="lightgrey")
     top_frame.pack(fill=tk.X)
 
-    title_label = tk.Label(top_frame, text="Open WebUI - Conda Installer", font=("Arial", 24), bg="lightgrey")
+    title_label = tk.Label(top_frame, text="AI System Installer by BrainDrive.ai", font=("Arial", 24), bg="lightgrey")
     title_label.place(relx=0.5, rely=0.5, anchor="center")
 
     # Create card instances

@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 
 class OpenWebUIPipelines(BaseCard):
     def __init__(self):
-        super().__init__(name="Open WebUI Pipelines", description="Pipelines are designed to automate the execution of tasks by linking multiple processes together in a seamless manner.", 
+        super().__init__(name="Open WebUI Pipelines", description="Pipelines allow you to extend your AI with additional features and functionality", 
         size="2.0GB")
         self.installed = False
 

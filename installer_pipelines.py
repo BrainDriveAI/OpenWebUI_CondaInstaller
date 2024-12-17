@@ -178,7 +178,7 @@ class PipelinesInstaller(BaseInstaller):
 
         self.status_updater.update_status(
             "Step: [1/2] Pipelines Installing Dependencies...",
-            "Installing requirements, this could take up 5-7 minutes depending on your system",
+            "Installing requirements, this could take 5-7 minutes depending on your system",
             50,
         )
 

@@ -35,7 +35,7 @@
 2. **Run the Installer:**
    Launch the application:
    ```bash
-   python app.py
+   python main_interface.py
    ```
    Alternatively, use the executable if provided in the releases.
 
@@ -44,7 +44,7 @@
 ## Usage
 
 1. **Start the Application:**
-   Run the `app.py` script to launch the installer GUI.
+   Run the `main_interface.py` script to launch the installer GUI.
 
 2. **Perform Installation:**
    - Click the **Install** button to set up Miniconda, create a Conda environment, and install Open WebUI.
@@ -61,21 +61,6 @@
 
 ---
 
-## File Structure
-
-- **`app.py`**: Entry point of the application.
-- **`MinicondaInstaller.py`**: Handles downloading and installing Miniconda.
-- **`environment_setup.py`**: Manages the Conda environment and Open WebUI setup.
-- **`logger.py`**: Handles logging for the application.
-- **`logs/`**: Directory where application logs are stored.
-
----
-
-## Logging and Debugging
-
-Logs are saved in the `logs/` directory. If you encounter any issues, refer to `installer.log` for detailed information.
-
----
 
 ## Contributing
 
