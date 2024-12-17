@@ -3,5 +3,7 @@ pywin32
 psutil
 requests
 logger 
-
+pillow
+pythoncom
+dulwich
 

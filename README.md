@@ -32,6 +32,13 @@
    cd OpenWebUI_CondaInstaller
    ```
 
+3. **Handle requirements:**
+   Launch the application:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+
 2. **Run the Installer:**
    Launch the application:
    ```bash
