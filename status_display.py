@@ -1,18 +1,20 @@
 import tkinter as tk
 from tkinter import ttk
 
+from status_spinner import StatusSpinner
+
 class StatusDisplay:
     def __init__(self, parent):
         """
         Initializes the StatusDisplay and creates its components.
-
-        :param parent: The parent frame or Tk root to attach this status display.
         """
         self.frame = tk.Frame(parent, height=100, bg="lightgrey")
         self.frame.pack(fill=tk.X, padx=10, pady=10)
 
         self.step_label = tk.Label(self.frame, text="Initializing...", font=("Arial", 12), bg="lightgrey")
         self.step_label.pack(anchor="w", padx=10, pady=5)
+
+        self.spinner = StatusSpinner(self.frame, self.step_label)  # Pass step_label to the spinner
 
         self.details_label = tk.Label(
             self.frame,
@@ -35,3 +37,4 @@ class StatusDisplay:
         :return: A tuple (step_label, details_label, progress_bar)
         """
         return self.step_label, self.details_label, self.progress_bar
+

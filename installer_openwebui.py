@@ -141,28 +141,31 @@ class OpenWebUIInstaller(BaseInstaller):
             # Start the process
             process = subprocess.Popen(
                 cmd_list,
-                # stdout=subprocess.PIPE,
-                # stderr=subprocess.STDOUT,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,                
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 creationflags=CREATE_NO_WINDOW,
                 encoding="utf-8"
             )
 
-            # Read and log output line by line
-            # for line in process.stdout:
-            #     print(line.strip())  # Real-time logging
-
-            process.wait()
+            # Capture the output
+            stdout, stderr = process.communicate()
 
             # Raise an error if the process fails
             if process.returncode != 0:
-                raise subprocess.CalledProcessError(process.returncode, cmd_list)
+                raise subprocess.CalledProcessError(process.returncode, cmd_list, output=stdout, stderr=stderr)
+
+            return stdout, stderr  # Ensure (stdout, stderr) is always returned
 
         except subprocess.CalledProcessError as e:
             print(f"Command failed with return code {e.returncode}")
+            print(f"Error output: {e.stderr}")
             raise
+        except Exception as e:
+            print(f"Unexpected error while running command: {e}")
+            raise
+
+
     def check_update(self, callback=None):
         """
         Check if an update is available for Open WebUI.
@@ -171,28 +174,55 @@ class OpenWebUIInstaller(BaseInstaller):
         """
         def update_task():
             print("Checking for updates...")
+            update_available = False
             try:
-                result = subprocess.run(
-                    [self.conda_exe, "run", "--prefix", self.env_path, "pip", "list", "--outdated"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=True,
+                # Check if open-webui is installed using pip show
+                stdout, _ = self.run_command(
+                    [self.conda_exe, "run", "--prefix", self.env_path, "pip", "show", "open-webui"]
                 )
 
-                # Parse the output to check for the package name
-                update_available = "open-webui" in result.stdout
-                print("An update is available for Open WebUI." if update_available else "Open WebUI is up to date.")
-                
-                # Pass the result to the callback if provided
-                if callback:
-                    callback(update_available)
+                # Parse the installed version of open-webui
+                installed_version = None
+                for line in stdout.splitlines():
+                    if line.startswith("Version:"):
+                        installed_version = line.split("Version:")[1].strip()
+                        break
 
-            except subprocess.CalledProcessError as e:
-                print(f"Error checking for updates: {e}")
-                if callback:
-                    callback(False)  # Assume no update in case of error
+                if installed_version:
+                    print(f"Installed open-webui version: {installed_version}")
+
+                    # Fetch the latest version from PyPI
+                    import urllib.request
+                    import json
+                    try:
+                        with urllib.request.urlopen("https://pypi.org/pypi/open-webui/json") as response:
+                            data = json.loads(response.read().decode())
+                            latest_version = data["info"]["version"]
+                            print(f"Latest open-webui version: {latest_version}")
+
+                        # Compare installed and latest versions
+                        if installed_version != latest_version:
+                            print("An update is available for open-webui.")
+                            update_available = True
+                        else:
+                            print("open-webui is up to date.")
+                            update_available = False
+                    except Exception as e:
+                        print(f"Error fetching latest open-webui version: {e}")
+                else:
+                    print("open-webui is not installed.")
+                    update_available = False
+
+            except subprocess.CalledProcessError:
+                print("open-webui is not installed.")
+            except FileNotFoundError:
+                print("Error: Could not find conda executable or the environment is not properly set up.")
+
+            # Pass the result to the callback if provided
+            if callback:
+                callback(update_available)
 
         # Run the update task in a separate thread
         threading.Thread(target=update_task, daemon=True).start()
+
 

@@ -93,6 +93,16 @@ class AppConfig:
             raise AttributeError("StatusUpdater has not been initialized.")
         return self._status_updater
 
+    def start_spinner(self):
+        """Start the spinner."""
+        if hasattr(self.status_display, "spinner"):
+            self.status_display.spinner.start()
+
+    def stop_spinner(self):
+        """Stop the spinner."""
+        if hasattr(self.status_display, "spinner"):
+            self.status_display.spinner.stop()
+
 
     def __str__(self):
         """

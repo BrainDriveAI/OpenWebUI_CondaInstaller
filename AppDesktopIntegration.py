@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 import requests
 import pythoncom
 from win32com.shell import shell, shellcon
@@ -18,7 +19,7 @@ class AppDesktopIntegration:
         
         self.base_path = app_config.base_path
         self.exe_name = "InstallerAutoUpdater.exe"
-        self.icon_name = "DigitalBrainBaseIcon.ico"
+        self.icon_name = "braindriveai.ico"
         self.desktop_path = shell.SHGetFolderPath(0, shellcon.CSIDL_DESKTOP, None, 0)
         self.shortcut_name = "Open WebUI Installer.lnk"
         self.shortcut_path = os.path.join(self.desktop_path, self.shortcut_name)
@@ -46,7 +47,14 @@ class AppDesktopIntegration:
         except Exception as e:
             print(f"Error verifying executable: {e}")
             raise
-
+    
+    def check_desktop_icon_exists(self):
+        """
+        Checks if the desktop icon exists.
+        :return: True if the desktop shortcut exists, False otherwise.
+        """
+        return os.path.exists(self.shortcut_path)
+    
     def create_desktop_icon(self):
         """
         Creates a desktop shortcut to the InstallerAutoUpdater.exe with the correct icon.
@@ -55,7 +63,7 @@ class AppDesktopIntegration:
             if not os.path.exists(self.exe_path):
                 raise FileNotFoundError(f"{self.exe_name} not found at {self.base_path}")
             if not os.path.exists(self.icon_path):
-                raise FileNotFoundError(f"{self.icon_name} not found at {self.base_path}")
+                self.setup_application_icon()
 
             # Create the shortcut
             shell_instance = Dispatch('WScript.Shell')
@@ -76,6 +84,9 @@ class AppDesktopIntegration:
         If not, updates it to point to the correct executable.
         """
         try:
+            # Initialize COM library
+            pythoncom.CoInitialize()
+
             shortcut_exists = os.path.exists(self.shortcut_path)
             if not shortcut_exists:
                 print("Shortcut does not exist. Creating a new one...")
@@ -98,4 +109,33 @@ class AppDesktopIntegration:
         except Exception as e:
             print(f"Error verifying or updating desktop shortcut: {e}")
             raise
+        finally:
+            # Uninitialize COM library
+            pythoncom.CoUninitialize()
 
+
+    def setup_application_icon(self):
+        """
+        Ensures the application icon exists in the base path.
+        Copies it from the source directory if necessary and returns its path.
+        """
+        try:
+            # Determine source and destination paths
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+            source_icon_path = os.path.join(base_path, self.icon_name)
+
+            # Copy the icon if it does not exist in the destination
+            if not os.path.exists(self.icon_path):
+                if os.path.exists(source_icon_path):
+                    shutil.copy2(source_icon_path, self.icon_path)
+                    print(f"Icon copied to {self.icon_path}")
+                else:
+                    raise FileNotFoundError(f"Source icon not found at {source_icon_path}")
+            else:
+                print(f"Icon already exists at {self.icon_path}")
+            
+            return self.icon_path  # Return the path to the icon for further use
+
+        except Exception as e:
+            print(f"Failed to set up application icon: {e}")
+            raise

@@ -5,6 +5,7 @@ import socket
 import subprocess
 import time
 import webbrowser
+from AppDesktopIntegration import AppDesktopIntegration
 from ButtonStateManager import ButtonStateManager
 from base_card import BaseCard
 import tkinter as tk
@@ -13,13 +14,14 @@ import threading
 from installer_miniconda import MinicondaInstaller
 from installer_openwebui import OpenWebUIInstaller
 from installer_pipelines import PipelinesInstaller
+from DiskSpaceChecker import DiskSpaceChecker
 
 class OpenWebUI(BaseCard):
     def __init__(self):
-        super().__init__(name="Open WebUI", description="A robust tool for creating controlling and befeting from your own AI System", size="4.5GB")
+        super().__init__(name="Open WebUI", description="A robust tool for creating controlling and befeting from your own AI System", size="4.5")
         self.server_running = False  # Tracks if the server is running
 
-    def install(self, status_updater=None):
+    def install_old(self, status_updater=None):
         """
         Implements the installation logic for Open WebUI.
         Updates the status bar if a StatusUpdater instance is provided.
@@ -62,7 +64,13 @@ class OpenWebUI(BaseCard):
         """
         def installation_task():
             button_manager = ButtonStateManager()
-            button_manager.disable_buttons("install_open_webui")
+            button_manager.disable_buttons([
+                "start_open_webui", 
+                "install_open_webui", 
+                "update_open_webui", 
+                "install_open_webui_pipelines", 
+                "update_open_webui_pipelines"
+            ])           
             try:
                 # Ensure Miniconda is installed
                 miniconda_installer = MinicondaInstaller(status_updater)
@@ -125,55 +133,37 @@ class OpenWebUI(BaseCard):
                         )
                     return
 
-                # Set up Pipelines
-                # pipeline_installer = PipelinesInstaller(status_updater)
-                try:
-                    miniconda_installer.setup_environment("env_pipelines", packages=["git"])
-
-                    if status_updater:
-                        status_updater.update_status(
-                            "Step: [3/3] Pipelines Environment Complete.",
-                            "Environment installed successfully.",
-                            100,
-                        )
-                except Exception as e:
-                    if status_updater:
-                        status_updater.update_status(
-                            "Error: Pipelines Setup Failed.",
-                            f"An error occurred: {e}",
-                            0,
-                        )
-                    return
-
-                # Set up Pipelines
-                pipeline_installer = PipelinesInstaller(status_updater)
-                try:
-                    pipeline_installer.install()
-
-                    if status_updater:
-                        status_updater.update_status(
-                            "Step: [3/3] Pipelines Install Complete.",
-                            "Pipelines installed successfully.",
-                            100,
-                        )
-                except Exception as e:
-                    if status_updater:
-                        status_updater.update_status(
-                            "Error: Pipelines Setup Failed.",
-                            f"An error occurred: {e}",
-                            0,
-                        )
-                    return
+ 
 
             finally:
                 # Ensure the button is always re-enabled at the end
                 webui_installer = OpenWebUIInstaller(status_updater)
+                pipeline_installer = PipelinesInstaller(status_updater)
                 if webui_installer.check_installed():
                     button_manager.enable_buttons("start_open_webui")
                 
-                # button_manager.enable_buttons("install_open_webui")
+                if not pipeline_installer.check_installed():
+                    button_manager.enable_buttons("install_open_webui_pipelines")
+
+                try:
+
+                    desktop_integration = AppDesktopIntegration()
+
+                    def background_task():
+                        desktop_integration.verify_exe_exists()
+                        
+                        desktop_integration.verify_and_update_icon()
+
+                    threading.Thread(target=background_task, daemon=True).start()
+
+                except Exception as e:
+                    print(f"Failed to set application icon: {e}")    
+
+                self.config.stop_spinner()            
+
 
         # Run installation in a separate thread
+        self.config.start_spinner()
         threading.Thread(target=installation_task, daemon=True).start()
 
 
@@ -293,6 +283,7 @@ class OpenWebUI(BaseCard):
                 if server_ready:
                     print("Server is up. Opening browser to http://localhost:8080...")
                     webbrowser.open("http://localhost:8080")
+                    self.config.stop_spinner()
                 else:
                     print("Server did not come up after multiple attempts.")
             except Exception as e:
@@ -302,12 +293,24 @@ class OpenWebUI(BaseCard):
             """
             Start both Open WebUI and Pipelines processes concurrently.
             """
+            self.config.start_spinner()
+
+            if status_updater:
+                status_updater.update_status(
+                    "Initializing Backend and Frontend...",
+                    f"Determining the status of Open WebUI and Pipelines.",
+                    10,
+                )
+
             button_manager = ButtonStateManager()
-            button_manager.disable_buttons("start_open_webui")
+            button_manager.disable_buttons(["start_open_webui","update_open_webui", "install_open_webui_pipelines", "update_open_webui_pipelines"])
 
             # Start both processes in separate threads
             threading.Thread(target=start_open_webui, daemon=True).start()
-            threading.Thread(target=start_pipelines, daemon=True).start()
+            pipeline_installer = PipelinesInstaller(status_updater)
+            if pipeline_installer.check_installed():
+                threading.Thread(target=start_pipelines, daemon=True).start()            
+            
 
             threading.Thread(target=monitor_server_and_open_browser, daemon=True).start()
 
@@ -319,7 +322,7 @@ class OpenWebUI(BaseCard):
             start_button = button_manager.buttons.get("start_open_webui")
             if start_button:
                 start_button.config(command=lambda: self.stop_server(status_updater))
-
+ 
         # Run the combined task in a separate thread
         threading.Thread(target=start_both_processes, daemon=True).start()
 
@@ -383,6 +386,10 @@ class OpenWebUI(BaseCard):
                 text="Start Open WebUI",
                 command=lambda: self.start_server(status_updater)
             )
+        pipeline_installer = PipelinesInstaller(status_updater)
+        if not pipeline_installer.check_installed():
+            button_manager.enable_buttons("install_open_webui_pipelines")
+        
 
     def uninstall(self, status_updater=None):
         """
@@ -523,9 +530,10 @@ class OpenWebUI(BaseCard):
         )
         card_info.place(x=10, y=70)
 
-        size_label = tk.Label(card_frame, text=f"Size: {self.size}", font=("Arial", 9))
+        size_label = tk.Label(card_frame, text=f"Size: {self.size}GB", font=("Arial", 9))
         size_label.place(x=10, rely=1.0, anchor="sw", y=-10)
 
+        disk_checker = DiskSpaceChecker()
         button_manager = ButtonStateManager()
         webui_installer = OpenWebUIInstaller(status_updater)
                 
@@ -558,14 +566,18 @@ class OpenWebUI(BaseCard):
             button_manager.enable_buttons("start_open_webui")
             webui_installer.check_update(callback=self.handle_update_check_result)
         else:
-            button_manager.enable_buttons("install_open_webui")
-            self.config.status_updater.update_status(
-                "Initializing Complete",
-                "New install required",
-                100,
-            )            
+            if disk_checker.has_enough_space(self.size):
+                button_manager.enable_buttons("install_open_webui")
+                self.config.status_updater.update_status(
+                    "Initializing Complete",
+                    "New install required",
+                    100,
+                )  
+            else:
+                button_manager.disable_buttons("install_open_webui")
+                self.config.status_updater.update_status(
+                    "Error - Open WebUI",
+                    "Not enough disk space",
+                    0,
+                )          
         
-        # button_manager.enable_buttons("update_open_webui")
-        
-
-        # button_manager.enable_buttons("install_open_webui")

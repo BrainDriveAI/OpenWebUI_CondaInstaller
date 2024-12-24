@@ -11,6 +11,7 @@ class MinicondaInstaller(BaseInstaller):
         self.installer_path = os.path.join(self.config.base_path, "MinicondaInstaller.exe")
         self.miniconda_url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
         self.conda_exe = self.config.conda_exe
+        self.base_path = self.config.base_path
 
     def check_installed(self):
         """
@@ -31,6 +32,11 @@ class MinicondaInstaller(BaseInstaller):
             return
 
         try:
+
+                # Ensure the base path exists
+            base_path = os.path.dirname(self.installer_path)
+            if not os.path.exists(base_path):
+                os.makedirs(base_path)
             self.download_installer()
 
             # Run the installer silently
@@ -39,7 +45,7 @@ class MinicondaInstaller(BaseInstaller):
                     "Running the Miniconda installer. Please wait.",
                     60,
                 )
-            subprocess.run(
+            self.run_command(
                 [
                     self.installer_path,
                     "/S",
@@ -48,7 +54,8 @@ class MinicondaInstaller(BaseInstaller):
                     "/RegisterPython=0",
                     f"/D={self.miniconda_path}",
                 ],
-                check=True,
+                capture_output=False  # Optionally set to False if real-time logging is preferred
+
             )
             self.config.status_updater.update_status(
                     "Step: [3/3] Installation Complete.",
@@ -146,6 +153,7 @@ class MinicondaInstaller(BaseInstaller):
             raise
 
 
+
     def run_command(self, cmd_list, cwd=None, capture_output=True):
         """
         Runs a command and logs output in real-time. Prevents console windows from appearing.
@@ -163,12 +171,17 @@ class MinicondaInstaller(BaseInstaller):
             # Windows-specific flag to suppress console window
             CREATE_NO_WINDOW = 0x08000000
 
+            # Configure STARTUPINFO to hide the console window
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
             process = subprocess.Popen(
                 cmd_list,
                 stdout=subprocess.PIPE if capture_output else None,
                 stderr=subprocess.PIPE if capture_output else None,
                 text=True,
                 creationflags=CREATE_NO_WINDOW,
+                startupinfo=startupinfo,
                 cwd=cwd,
                 env=os.environ.copy()  # Ensure environment variables are inherited
             )

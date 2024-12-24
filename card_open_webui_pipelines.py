@@ -1,24 +1,109 @@
 import os
 import sys
+import threading
+from ButtonStateManager import ButtonStateManager
 from base_card import BaseCard
 import tkinter as tk
 from PIL import Image, ImageTk
 
+from installer_miniconda import MinicondaInstaller
+from installer_openwebui import OpenWebUIInstaller
+from installer_pipelines import PipelinesInstaller
+from DiskSpaceChecker import DiskSpaceChecker
+
 class OpenWebUIPipelines(BaseCard):
     def __init__(self):
         super().__init__(name="Open WebUI Pipelines", description="Pipelines allow you to extend your AI with additional features and functionality", 
-        size="2.0GB")
+        size="2.0")
         self.installed = False
 
-    def install(self):
+    def install(self, status_updater=None):
         """
-        Implements the installation logic for Open WebUI Pipelines.
+        Install Open WebUI, ensuring prerequisites like Miniconda are installed.
         """
-        print(f"Installing {self.name}...")
-        import time
-        time.sleep(3)  # Simulate installation time
-        self.installed = True
-        print(f"{self.name} installation complete.")
+        def installation_task():
+            button_manager = ButtonStateManager()
+            button_manager.disable_buttons(["start_open_webui", "install_open_webui", "update_open_webui", "install_open_webui_pipelines", "update_open_webui_pipelines"])
+
+            try:
+                self.config.start_spinner()
+                # Ensure Miniconda is installed
+                miniconda_installer = MinicondaInstaller(status_updater)
+                miniconda_installer.install()
+
+                # Check if Miniconda installation is successful
+                if not miniconda_installer.check_installed():
+                    if status_updater:
+                        status_updater.update_status(
+                            "Error: Miniconda Installation Failed.",
+                            "Cannot proceed with Open WebUI installation.",
+                            0,
+                        )
+                    return
+
+
+                # Set up Pipelines
+                # pipeline_installer = PipelinesInstaller(status_updater)
+                try:
+                    if status_updater:
+                        status_updater.update_status(
+                            "Step: [1/6] Pipelines Environment Setup is starting",
+                            "Environment is being installed.",
+                            0,
+                        )                  
+                    miniconda_installer.setup_environment("env_pipelines", packages=["git"])
+
+                    if status_updater:
+                        status_updater.update_status(
+                            "Step: [2/6] Pipelines Environment Complete.",
+                            "Environment installed successfully.",
+                            25,
+                        )
+                except Exception as e:
+                    if status_updater:
+                        status_updater.update_status(
+                            "Error: Pipelines Setup Failed.",
+                            f"An error occurred: {e}",
+                            0,
+                        )
+                    return
+
+                # Set up Pipelines
+                pipeline_installer = PipelinesInstaller(status_updater)
+                try:
+                    if status_updater:
+                        status_updater.update_status(
+                            "Step: [3/6] Starting Pipelines Instalation.",
+                            "Pipelines Installing",
+                            50,
+                        )                    
+                    pipeline_installer.install()
+
+                    if status_updater:
+                        status_updater.update_status(
+                            "Step: [6/6] Pipelines Install Complete.",
+                            "Pipelines installed successfully.",
+                            100,
+                        )
+                except Exception as e:
+                    if status_updater:
+                        status_updater.update_status(
+                            "Error: Pipelines Setup Failed.",
+                            f"An error occurred: {e}",
+                            0,
+                        )
+                    return
+
+            finally:
+                # Ensure the button is always re-enabled at the end
+                webui_installer = OpenWebUIInstaller(status_updater)
+                if webui_installer.check_installed():
+                    button_manager.enable_buttons("start_open_webui")
+                self.config.stop_spinner()
+
+
+        # Run installation in a separate thread
+        threading.Thread(target=installation_task, daemon=True).start()
 
     def uninstall(self):
         """
@@ -75,22 +160,40 @@ class OpenWebUIPipelines(BaseCard):
         )
         card_info.place(x=10, y=70)
 
-        size_label = tk.Label(card_frame, text=f"Size: {self.size}", font=("Arial", 9))
+        size_label = tk.Label(card_frame, text=f"Size: {self.size}GB", font=("Arial", 9))
         size_label.place(x=10, rely=1.0, anchor="sw", y=-10)
 
+        disk_checker = DiskSpaceChecker()
+        button_manager = ButtonStateManager()
 
         auto_button = tk.Button(card_frame, text="Auto", state=tk.DISABLED)
-        auto_button.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
+        # auto_button.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
 
-        install_button = tk.Button(card_frame, text="Install", command=self.install)
-        # install_button.place(relx=1.0, rely=1.0, anchor="se", x=-90, y=-10)
+        install_button = tk.Button(card_frame, text="Install", command=lambda: self.install(status_updater))
+        install_button.place(relx=1.0, rely=1.0, anchor="se", x=-70, y=-10)
+        install_button.config(state="disabled")
+        button_manager.register_button("install_open_webui_pipelines", install_button)
 
-        uninstall_button = tk.Button(card_frame, text="Uninstall", command=self.uninstall)
-        # uninstall_button.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
+        update_button = tk.Button(card_frame, text="Update", command=lambda: self.update(status_updater))
+        update_button.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
+        update_button.config(state="disabled")
+        button_manager.register_button("update_open_webui_pipelines", update_button)
 
-        status_button = tk.Button(
-            card_frame,
-            text="Status",
-            command=lambda: print(self.get_status())
-        )
-        # status_button.place(relx=0.0, rely=1.0, anchor="sw", x=10, y=-10)
+        webui_installer = OpenWebUIInstaller(status_updater)
+        pipeline_installer = PipelinesInstaller(status_updater)
+        if webui_installer.check_installed() and not pipeline_installer.check_installed():
+            if disk_checker.has_enough_space(self.size):
+                button_manager.enable_buttons("install_open_webui_pipelines")
+            else:
+                button_manager.disable_buttons("install_open_webui_pipelines")
+                self.config.status_updater.update_status(
+                    "Error - Open WebUI Pipelines",
+                    "Not enough disk space",
+                    0,
+                ) 
+
+
+
+
+        
+    

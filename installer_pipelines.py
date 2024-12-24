@@ -74,7 +74,35 @@ class PipelinesInstaller(BaseInstaller):
             os.path.join(self.env_pipelines_path, "bin", "python"),
             os.path.join(self.env_pipelines_path, "bin", "python3")
         ]
+    def check_for_updates(self):
+        """
+        Checks if there are updates available for the pipelines repository.
+        :return: True if updates are available, False otherwise.
+        """
+        try:
+            # Ensure the repository exists
+            if not os.path.exists(self.pipelines_repo_path):
+                raise RuntimeError("Pipelines repository is not cloned. Please install pipelines first.")
 
+            print("Checking for updates in the pipelines repository...")
+
+            # Fetch changes from the remote repository
+            with porcelain.open_repo_closing(self.pipelines_repo_path) as repo:
+                remote_refs = porcelain.fetch(repo, self.pipelines_repo_url)
+            
+            # Compare local HEAD with the fetched remote HEAD
+            local_head = repo.head().decode("utf-8")
+            remote_head = remote_refs[b"HEAD"].decode("utf-8")
+
+            if local_head != remote_head:
+                print("Updates are available for the pipelines repository.")
+                return True
+            else:
+                print("Pipelines repository is up-to-date.")
+                return False
+        except Exception as e:
+            print(f"Error checking for updates: {e}")
+            raise
     def install(self):
         """
         Install pipelines by setting up the environment and cloning the repository.
@@ -84,7 +112,15 @@ class PipelinesInstaller(BaseInstaller):
         try:
             # Step 1: Clone the repository
             if not os.path.exists(self.pipelines_repo_path):
-                print(f"[1/3] Cloning pipelines repository from {self.pipelines_repo_url}...")
+                if self.status_updater:
+                    self.status_updater.update_status(
+                        "Step: [4/6] Pipelines Cloning...",
+                        "Cloning the Pipelines repository, this could take 5-7 minutes depending on your system",
+                        50,
+                    )
+
+                print(f"[4/6] Cloning pipelines repository from {self.pipelines_repo_url}...")
+
                 try:
                     porcelain.clone(self.pipelines_repo_url, self.pipelines_repo_path)
                     print("Pipelines repository cloned successfully.")
@@ -96,16 +132,28 @@ class PipelinesInstaller(BaseInstaller):
             # Step 2: Install dependencies using the previously set up Conda environment
             requirements_file = os.path.join(self.pipelines_repo_path, "requirements.txt")
             if os.path.exists(requirements_file):
-                print(f"[2/3] Installing dependencies from {requirements_file}...")
+                print(f"[5/6] Installing dependencies from {requirements_file}...")
+                if self.status_updater:
+                    self.status_updater.update_status(
+                        "Step: [5/6] Pipelines Installing Dependencies...",
+                        "Installing requirements, this could take 5-7 minutes depending on your system",
+                        75,
+                    )
                 try:
                     self._install_dependencies(requirements_file)
                 except Exception as e:
                     raise RuntimeError(f"Failed to install dependencies: {e}")
             else:
-                print("[2/3] No requirements.txt found. Skipping dependency installation.")
+                print("[6/6] No requirements.txt found. Skipping dependency installation.")
 
             # Step 3: Finalize installation
-            print(f"[3/3] {self.name} installation complete.")
+            print(f"[6/6] {self.name} installation complete.")
+            if self.status_updater:
+                self.status_updater.update_status(
+                    "Step: [6/6] Pipelines Install Complete.",
+                    "Pipelines installed successfully.",
+                    100,
+                )
 
         except Exception as e:
             print(f"Error during installation: {e}")
@@ -176,11 +224,11 @@ class PipelinesInstaller(BaseInstaller):
         print("Installing dependencies from requirements.txt...")
         python_executable = self._find_python_executable()
 
-        self.status_updater.update_status(
-            "Step: [1/2] Pipelines Installing Dependencies...",
-            "Installing requirements, this could take 5-7 minutes depending on your system",
-            50,
-        )
+        # self.status_updater.update_status(
+        #     "Step: [1/2] Pipelines Installing Dependencies...",
+        #     "Installing requirements, this could take 5-7 minutes depending on your system",
+        #     50,
+        # )
 
         # Command to install dependencies
         pip_install_cmd = [
@@ -192,11 +240,11 @@ class PipelinesInstaller(BaseInstaller):
 
         try:
             stdout, stderr = self.run_command(pip_install_cmd)
-            self.status_updater.update_status(
-                "Step: [2/2] Pipelines Dependencies Installed.",
-                "Dependencies installed successfully.",
-                100,
-            )
+            # self.status_updater.update_status(
+            #     "Step: [2/2] Pipelines Dependencies Installed.",
+            #     "Dependencies installed successfully.",
+            #     100,
+            # )
             print("Dependencies installed successfully.")
 
         except subprocess.CalledProcessError as e:

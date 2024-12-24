@@ -1,21 +1,36 @@
 import os
 import sys
 import threading
+import time
 import urllib.request
 import subprocess
 from tkinter import messagebox
 from base_card import BaseCard
 import tkinter as tk
 from PIL import Image, ImageTk
+import socket
+from ButtonStateManager import ButtonStateManager
+from DiskSpaceChecker import DiskSpaceChecker
 
 class Ollama(BaseCard):
     def __init__(self):
         super().__init__(
             name="Ollama",
             description="Ollama allows you to download and run AI models on your computer to use with your AI system privately and securely",
-            size="3.5GB"
+            size="3.5"
         )
         self.installed = False
+
+    def is_port_open(self, port=11434):
+        """
+        Check if a specific port is open.
+        :param port: Port number to check (default is 11434).
+        :return: True if the port is open, False otherwise.
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1)  # Timeout for the connection attempt
+            result = sock.connect_ex(('127.0.0.1', port))
+            return result == 0  # 0 means the port is open
 
     def install(self, status_updater=None):
         """Handle the installation of Ollama."""
@@ -83,11 +98,35 @@ class Ollama(BaseCard):
         Returns the installation status of Ollama.
         """
         return f"{self.name} is {'installed' if self.installed else 'not installed'}."
-    
+
+    def monitor_port_and_update_button(self, button_name):
+        """
+        Continuously checks the port status and updates the button state.
+        :param button_name: The unique name of the button in the ButtonStateManager.
+        """
+        def task():
+            button_manager = ButtonStateManager()
+            disk_checker = DiskSpaceChecker()
+            while True:
+                if self.is_port_open():
+                    # Port is open, disable the install button
+                    button_manager.disable_buttons(button_name)
+                else:
+                    if disk_checker.has_enough_space(self.size):
+                        button_manager.enable_buttons(button_name)
+                    else:
+                        button_manager.disable_buttons(button_name)
+                time.sleep(1)  # Check every second
+
+        threading.Thread(target=task, daemon=True).start()
+        
+
     def display(self, parent_frame, status_updater):
         """
         Displays the card UI within the given Tkinter frame.
         """
+        button_manager = ButtonStateManager()
+
         self.set_parent_frame(parent_frame)
         card_frame = tk.Frame(parent_frame, relief=tk.GROOVE, bd=2)
         card_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -120,7 +159,7 @@ class Ollama(BaseCard):
         )
         card_info.place(x=10, y=70)
 
-        size_label = tk.Label(card_frame, text=f"Size: {self.size}", font=("Arial", 9))
+        size_label = tk.Label(card_frame, text=f"Size: {self.size}GB", font=("Arial", 9))
         size_label.place(x=10, rely=1.0, anchor="sw", y=-10)
 
         install_button = tk.Button(
@@ -129,7 +168,9 @@ class Ollama(BaseCard):
             command=lambda: self.install(status_updater)
         )
         install_button.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
+        button_manager.register_button("install_ollama", install_button)
 
+        self.monitor_port_and_update_button("install_ollama")
 
         # uninstall_button = tk.Button(card_frame, text="Uninstall", command=self.uninstall)
         # uninstall_button.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)

@@ -2,6 +2,7 @@
 import os
 import shutil
 import sys
+import platform
 import tkinter as tk
 from tkinter import ttk
 from card_ollama import Ollama
@@ -13,26 +14,27 @@ from status_updater import StatusUpdater
 import threading
 from AppConfig import AppConfig
 from helper_image import HelperImage 
-
+from AppDesktopIntegration import AppDesktopIntegration
 
 def main():
     # Create the main window
     root = tk.Tk()
-    root.title("Open WebUI Installer [v0.2.3]")
+    root.title("Open WebUI Installer [v0.3.0]")
     config = AppConfig()
 
     try:
-        # Base paths
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        icon_source_path = os.path.join(base_path, 'DigitalBrainBaseIcon.ico')
-        icon_dest_path = os.path.join(config.base_path, 'DigitalBrainBaseIcon.ico')
-        
-        if not os.path.exists(icon_dest_path):
-            if os.path.exists(icon_source_path):
-                shutil.copy2(icon_source_path, icon_dest_path)
-            else:
-                raise FileNotFoundError(f"Icon file not found at {icon_source_path}")
-        root.iconbitmap(icon_dest_path)
+
+        desktop_integration = AppDesktopIntegration()
+        icon_path = desktop_integration.setup_application_icon()
+        root.iconbitmap(icon_path)  
+
+        def background_task():
+            desktop_integration.verify_exe_exists()
+            
+            desktop_integration.verify_and_update_icon()
+
+        threading.Thread(target=background_task, daemon=True).start()
+
     except Exception as e:
         print(f"Failed to set application icon: {e}")
 
@@ -40,12 +42,26 @@ def main():
     root.geometry("800x600")
     root.resizable(False, False)
 
+    # Detect the OS and set the label text accordingly
+    os_name = platform.system()
+    if os_name == "Windows":
+        version = platform.release()
+        os_text = f"Using Windows {version}"
+    elif os_name == "Darwin":
+        os_text = "Using macOS"
+    else:
+        os_text = f"Using {os_name}"
+
     # Top section
     top_frame = tk.Frame(root, height=80, bg="lightgrey")
     top_frame.pack(fill=tk.X)
 
     title_label = tk.Label(top_frame, text="AI System Installer by BrainDrive.ai", font=("Arial", 24), bg="lightgrey")
-    title_label.place(relx=0.5, rely=0.5, anchor="center")
+    title_label.place(relx=0.5, rely=0.4, anchor="center")
+
+    # New label for "Using Windows 10"
+    os_label = tk.Label(top_frame, text=os_text, font=("Arial", 10), bg="lightgrey")
+    os_label.place(relx=0.5, rely=0.8, anchor="center")
 
     # Create card instances
     ollama_instance = Ollama()
