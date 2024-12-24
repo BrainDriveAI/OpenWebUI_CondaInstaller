@@ -284,6 +284,11 @@ class OpenWebUI(BaseCard):
                     print("Server is up. Opening browser to http://localhost:8080...")
                     webbrowser.open("http://localhost:8080")
                     self.config.stop_spinner()
+                    status_updater.update_status(
+                        "Open WebUI Server Started",
+                        "Your browser should open shortly.",
+                        100,
+                    )                    
                 else:
                     print("Server did not come up after multiple attempts.")
             except Exception as e:
