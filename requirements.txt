@@ -1,9 +1,5 @@
-tkintertable
-pywin32
-psutil
-requests
-logger 
-pillow
-pythoncom
-dulwich
-
+dulwich==0.22.6
+Pillow==11.0.0
+psutil==6.1.0
+pywin32==308
+Requests==2.32.3
