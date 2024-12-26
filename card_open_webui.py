@@ -21,42 +21,6 @@ class OpenWebUI(BaseCard):
         super().__init__(name="Open WebUI", description="A robust tool for creating controlling and befeting from your own AI System", size="4.5")
         self.server_running = False  # Tracks if the server is running
 
-    def install_old(self, status_updater=None):
-        """
-        Implements the installation logic for Open WebUI.
-        Updates the status bar if a StatusUpdater instance is provided.
-        """
-        def installation_task():
-            if status_updater:
-                status_updater.update_status(
-                    "Step: [1/3] Preparing Installation...",
-                    "Initializing installation process for Open WebUI.",
-                    0,
-                )
-            import time
-            time.sleep(2)
-
-            if status_updater:
-                status_updater.update_status(
-                    "Step: [2/3] Installing...",
-                    "Installing Open WebUI. Please wait.",
-                    50,
-                )
-            time.sleep(3)
-
-            self.is_installed = True
-            if status_updater:
-                status_updater.update_status(
-                    "Step: [3/3] Finalizing...",
-                    "Installation complete for Open WebUI.",
-                    100,
-                )
-            time.sleep(1)
-
-            print(f"{self.name} installation complete.")
-
-        # Run the installation task in a separate thread
-        threading.Thread(target=installation_task, daemon=True).start()
 
     def install(self, status_updater=None):
         """
@@ -190,7 +154,7 @@ class OpenWebUI(BaseCard):
 
                 status_updater.update_status(
                     "Step: Starting Open WebUI...",
-                    "Launching the Open WebUI server. Please wait.",
+                    "Launching the Open WebUI server. Please wait. (Sometimes this can take a few minutes)",
                     50,
                 )
                 conda_exe = webui_installer.conda_exe
@@ -216,9 +180,9 @@ class OpenWebUI(BaseCard):
                     f.write(str(webui_process.pid))
 
                 status_updater.update_status(
-                    "Step: Open WebUI Started.",
-                    "Open WebUI server is now running.",
-                    75,
+                    "Step: Starting Open WebUI...",
+                    "Launching the Open WebUI server. Please wait. (Sometimes this can take a few minutes)",
+                    60,
                 )
             except Exception as e:
                 if status_updater:
@@ -279,7 +243,7 @@ class OpenWebUI(BaseCard):
                             server_ready = True
                             break
                     except (socket.timeout, ConnectionRefusedError):
-                        time.sleep(2)  # Wait before retrying
+                        time.sleep(1)  # Wait before retrying
                 if server_ready:
                     print("Server is up. Opening browser to http://localhost:8080...")
                     webbrowser.open("http://localhost:8080")
@@ -320,7 +284,7 @@ class OpenWebUI(BaseCard):
             threading.Thread(target=monitor_server_and_open_browser, daemon=True).start()
 
             # After some time, re-enable the button
-            time.sleep(2)
+            time.sleep(1)
             button_manager.set_button_text("start_open_webui", "Stop Open WebUI")
             button_manager.enable_buttons("start_open_webui")
 
@@ -575,7 +539,7 @@ class OpenWebUI(BaseCard):
                 button_manager.enable_buttons("install_open_webui")
                 self.config.status_updater.update_status(
                     "Initializing Complete",
-                    "New install required",
+                    "New install required, please click Install for Open WebUI.",
                     100,
                 )  
             else:

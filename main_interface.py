@@ -19,7 +19,7 @@ from AppDesktopIntegration import AppDesktopIntegration
 def main():
     # Create the main window
     root = tk.Tk()
-    root.title("Open WebUI Installer [v0.3.0]")
+    root.title("BrainDrive.ai Installer [v0.3.3]")
     config = AppConfig()
 
     try:
@@ -45,8 +45,12 @@ def main():
     # Detect the OS and set the label text accordingly
     os_name = platform.system()
     if os_name == "Windows":
-        version = platform.release()
-        os_text = f"Using Windows {version}"
+        version = platform.version()  # Example: '10.0.22000'
+        major, minor, build = map(int, version.split('.'))
+        if major == 10 and build >= 22000:
+            os_text = "Using Windows 11"
+        else:
+            os_text = f"Using Windows {platform.release()}"
     elif os_name == "Darwin":
         os_text = "Using macOS"
     else:
