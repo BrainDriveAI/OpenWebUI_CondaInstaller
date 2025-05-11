@@ -1,3 +1,7 @@
+> ⚠️ **Archived Project**  
+> This project is no longer actively maintained by the original authors.  
+> The repository remains available for reference and community use.
+
 # OpenWebUI_CondaInstaller
 
 ---
