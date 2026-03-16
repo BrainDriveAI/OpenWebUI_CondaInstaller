@@ -4,7 +4,10 @@ import shutil
 import sys
 import platform
 import tkinter as tk
+import pystray
 from tkinter import ttk
+from PIL import Image
+from threading import Thread
 from card_ollama import Ollama
 from card_open_webui import OpenWebUI
 from card_open_webui_pipelines import OpenWebUIPipelines
@@ -96,7 +99,24 @@ def main():
     webui_instance.display(left_group, status_updater)
     pipelines_instance.display(right_group, status_updater)
     ollama_instance.display(right_group, status_updater)
+    # Tray icon setup
+    def on_closing():
+        root.withdraw()  # Hide the window
+        # Optional: Add logic to show the window again from the tray
 
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+    def setup_tray_icon():
+        icon = Image.open("braindriveai.ico")  # Replace with your icon path
+        menu = pystray.Menu(
+            pystray.MenuItem("Restore", root.deiconify),
+            pystray.MenuItem("Exit", root.destroy)
+        )
+        tray = pystray.Icon("BrainDrive", icon, "BrainDrive.ai Installer", menu)
+        tray.run()
+
+    # Start tray icon setup
+    Thread(target=setup_tray_icon, daemon=True).start()
 
     # Run the main loop
     root.mainloop()
